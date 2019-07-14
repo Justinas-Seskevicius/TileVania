@@ -14,6 +14,8 @@ public class Player : MonoBehaviour
     [SerializeField] LayerMask jumpableSurfaceMasks;
     [SerializeField] Transform groundChecker;
     [SerializeField] float groundCheckRadius = 0.2f;
+    [SerializeField] float maxCoyoteTime = 0.3f;
+    [SerializeField] float fallMultiplier = 2.5f;
 
     // Cache
     Rigidbody2D myRigidBody;
@@ -25,6 +27,7 @@ public class Player : MonoBehaviour
     float startingGravity;
     bool isAlive;
     bool isGrounded;
+    float coyoteTime;
 
     void Start()
     {
@@ -65,9 +68,23 @@ public class Player : MonoBehaviour
 
     private void Jump()
     {
-        if (CrossPlatformInputManager.GetButtonDown("Jump") && isGrounded)
+        if(isGrounded)
         {
-            myRigidBody.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
+            coyoteTime = maxCoyoteTime;
+        }
+        else
+        {
+            coyoteTime -= Time.deltaTime;
+        }
+
+        if(CrossPlatformInputManager.GetButtonDown("Jump") && (isGrounded || coyoteTime > 0))
+        {
+            myRigidBody.AddForce(Vector2.up * jumpSpeed);
+        }
+
+        if(myRigidBody.velocity.y < 0)
+        {
+            myRigidBody.AddForce(Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.deltaTime, ForceMode2D.Impulse);
         }
     }
 
