@@ -11,21 +11,29 @@ public class Player : MonoBehaviour
     [SerializeField] float jumpSpeed = 5f;
     [SerializeField] float climbSpeed = 5f;
     [SerializeField] Vector2 deathKick = new Vector2(5f, 5f);
+    [SerializeField] LayerMask jumpableSurfaceMasks;
+    [SerializeField] Transform groundChecker;
+    [SerializeField] float groundCheckRadius = 0.2f;
+
     // Cache
     Rigidbody2D myRigidBody;
     Animator animator;
-    CapsuleCollider2D bodyCollider;
-    BoxCollider2D feetCollider;
+    BoxCollider2D bodyCollider;
+    SpriteRenderer bodySpriteRenderer;
+
+    // State
     float startingGravity;
-    bool isAlive = true;
+    bool isAlive;
+    bool isGrounded;
 
     void Start()
     {
+        isAlive = true;
         myRigidBody = GetComponent<Rigidbody2D>();
         startingGravity = myRigidBody.gravityScale;
         animator = GetComponent<Animator>();
-        bodyCollider = GetComponent<CapsuleCollider2D>();
-        feetCollider = GetComponent<BoxCollider2D>();
+        bodyCollider = GetComponent<BoxCollider2D>();
+        bodySpriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     // Update is called once per frame
@@ -40,6 +48,11 @@ public class Player : MonoBehaviour
         Die();
     }
 
+    private void FixedUpdate()
+    {
+        isGrounded = Physics2D.OverlapCircle(groundChecker.position, groundCheckRadius, jumpableSurfaceMasks);
+    }
+
     private void Move()
     {
         float horizontalThrow = CrossPlatformInputManager.GetAxis("Horizontal");
@@ -52,16 +65,15 @@ public class Player : MonoBehaviour
 
     private void Jump()
     {
-        if(CrossPlatformInputManager.GetButtonDown("Jump") && feetCollider.IsTouchingLayers(LayerMask.GetMask("Ground")))
+        if (CrossPlatformInputManager.GetButtonDown("Jump") && isGrounded)
         {
-            Vector2 jumpVelocity = new Vector2(0f, jumpSpeed);
-            myRigidBody.velocity += jumpVelocity;
+            myRigidBody.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
         }
     }
 
     private void ClimbLadder()
     {
-        if(!feetCollider.IsTouchingLayers(LayerMask.GetMask("Climbing")))
+        if(!bodyCollider.IsTouchingLayers(LayerMask.GetMask("Climbing")))
         {
             myRigidBody.gravityScale = startingGravity;
             animator.SetBool("IsClimbing", false);
@@ -79,10 +91,14 @@ public class Player : MonoBehaviour
 
     private void FlipSprite()
     {
-        bool playerHasHorizontalSpeed = Mathf.Abs(myRigidBody.velocity.x) > Mathf.Epsilon;
-        if(playerHasHorizontalSpeed)
+        float moveInput = CrossPlatformInputManager.GetAxis("Horizontal");
+        if(moveInput > 0)
         {
-            transform.localScale = new Vector2(Mathf.Sign(myRigidBody.velocity.x), transform.localScale.y);
+            bodySpriteRenderer.flipX = false;
+        }
+        else if(moveInput < 0)
+        {
+            bodySpriteRenderer.flipX = true;
         }
     }
 
